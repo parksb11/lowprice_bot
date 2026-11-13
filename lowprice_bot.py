@@ -234,21 +234,19 @@ def fetch_lowest_offer_via_skill(pcode: str) -> dict:
 
 
 def load_kakao_credentials(env_path: Path = ENV_PATH) -> tuple[str, str, str]:
-    """프로젝트 폴더의 .env 파일에서 카카오 인증 정보를 읽어온다."""
-    if not env_path.exists():
-        raise RuntimeError(f".env 파일을 찾을 수 없습니다: {env_path}")
-
+    """프로젝트 폴더의 .env 파일 또는 환경 변수(GitHub Secrets 등)에서 카카오 인증 정보를 읽어온다."""
     values: dict[str, str] = {}
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, val = line.split("=", 1)
-        values[key.strip()] = val.strip().strip('"').strip("'")
+    if env_path.exists():
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, val = line.split("=", 1)
+            values[key.strip()] = val.strip().strip('"').strip("'")
 
-    rest_api_key = values.get("KAKAO_REST_API_KEY") or os.environ.get("KAKAO_REST_API_KEY", "")
-    client_secret = values.get("KAKAO_CLIENT_SECRET") or os.environ.get("KAKAO_CLIENT_SECRET", "")
-    refresh_token = values.get("KAKAO_REFRESH_TOKEN") or os.environ.get("KAKAO_REFRESH_TOKEN", "")
+    rest_api_key = os.environ.get("KAKAO_REST_API_KEY") or values.get("KAKAO_REST_API_KEY", "")
+    client_secret = os.environ.get("KAKAO_CLIENT_SECRET") or values.get("KAKAO_CLIENT_SECRET", "")
+    refresh_token = os.environ.get("KAKAO_REFRESH_TOKEN") or values.get("KAKAO_REFRESH_TOKEN", "")
 
     missing = [
         name
@@ -260,7 +258,9 @@ def load_kakao_credentials(env_path: Path = ENV_PATH) -> tuple[str, str, str]:
         if not val
     ]
     if missing:
-        raise RuntimeError(f".env에 필수 카카오 인증 정보가 없습니다: {', '.join(missing)}")
+        raise RuntimeError(
+            f"환경 변수 또는 .env에 필수 카카오 인증 정보가 없습니다: {', '.join(missing)}"
+        )
 
     return rest_api_key, client_secret, refresh_token
 
